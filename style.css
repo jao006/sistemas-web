@@ -1,0 +1,29 @@
+body {
+    font-family: system-ui, sans-serif;
+    background: #0f1f3d;
+    color: white;
+    margin: 0;
+    padding: 20px;
+  }
+  nav {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 30px;
+  }
+  button {
+    background: #e07b2a;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 6px;
+    font-size: 16px;
+    cursor: pointer;
+  }
+  button:hover {
+    opacity: 0.85;
+  }
+  section {
+    background: rgba(255,255,255,0.08);
+    padding: 30px;
+    border-radius: 8px;
+  }
