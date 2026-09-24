@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Painel da Loja</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+    <h1>Painel Loja</h1>
+
+    <nav>
+        <button onclick="mostrarTela('login')">Login</button>
+        <button onclick="mostrarTela('produtos')">Produtos</button>
+        <button onclick="mostrarTela('admin')">Admin</button>
+        <button onclick="mostrarTela('perfil')">Perfil</button>
+    </nav>
+
+    <section id="tela-login">
+        <h2>Tela de Login</h2>
+
+        <form id="form-login">
+            <input type="email" id="email" placeholder="E-mail" required>
+            <input type="password" id="senha" placeholder="Senha" required>
+            <button type="submit">Enviar</button>
+        </form>
+
+        <p id="mensagem-login"></p>
+    </section>
+
+    <section id="tela-produtos" style="display: none;">
+        <h2>Tela Produtos</h2>
+    </section>
+
+    <section id="tela-admin" style="display: none;">
+        <h2>Área Admin</h2>
+
+        <form id="form-produto">
+            <input type="text" id="nome-produto" placeholder="Nome do produto">
+            <input type="number" id="preco-produto" placeholder="Preço" step="0.01">
+
+            <button type="submit">Cadastrar</button>
+        </form>
+
+        <p id="mensagem-produto"></p>
+    </section>
+
+    <section id="tela-perfil" style="display: none;">
+        <h2>Perfil</h2>
+        <p>Só eu posso acessar meu perfil.</p>
+    </section>
+
+    <script>
+
+        function mostrarTela(nome) {
+
+            const telas = document.querySelectorAll('section');
+
+            telas.forEach(tela => {
+                tela.style.display = 'none';
+            });
+
+            const telaEscolhida = document.getElementById('tela-' + nome);
+
+            if (telaEscolhida) {
+                telaEscolhida.style.display = 'block';
+            }
+        }
+
+        const form_login = document.getElementById('form-login');
+
+        form_login.addEventListener('submit', function (evento) {
+
+            evento.preventDefault();
+
+            const email = document.getElementById('email').value;
+            const senha = document.getElementById('senha').value;
+
+            fetch('http://localhost:3000/login', {
+
+                method: 'POST',
+
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+
+                body: JSON.stringify({
+                    email: email,
+                    senha: senha
+                })
+
+            })
+
+                .then(resposta => resposta.json())
+
+                .then(dados => {
+
+                    if (dados.token) {
+
+                        localStorage.setItem('token', dados.token);
+
+                        document.getElementById('mensagem-login').textContent =
+                            'Login feito com sucesso!';
+
+                    } else {
+
+                        document.getElementById('mensagem-login').textContent =
+                            'E-mail ou senha inválidos.';
+
+                    }
+
+                })
+
+                .catch(erro => {
+
+                    console.error('Erro ao fazer login:', erro);
+
+                    document.getElementById('mensagem-login').textContent =
+                        'Erro ao conectar com o servidor.';
+
+                });
+
+        });
+
+        const formProduto = document.getElementById('form-produto');
+
+        formProduto.addEventListener('submit', function (evento) {
+
+            evento.preventDefault();
+
+            const nome = document.getElementById('nome-produto').value;
+            const preco = document.getElementById('preco-produto').value;
+
+            if (nome === '' || preco === '') {
+
+                document.getElementById('mensagem-produto').textContent =
+                    'Preencha nome e preço';
+
+                return;
+            }
+
+            if (Number(preco) <= 0) {
+
+                document.getElementById('mensagem-produto').textContent =
+                    'O preço precisa ser maior que zero';
+
+                return;
+            }
+
+            const token = localStorage.getItem('token');
+
+            if (!token) {
+
+                document.getElementById('mensagem-produto').textContent =
+                    'Faça login antes de cadastrar um produto.';
+
+                return;
+            }
+
+            fetch('http://localhost:3000/produtos', {
+
+                method: 'POST',
+
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': 'Bearer ' + token
+                },
+
+                body: JSON.stringify({
+                    nome: nome,
+                    preco: Number(preco)
+                })
+
+            })
+
+                .then(resposta => resposta.json())
+
+                .then(dados => {
+
+                    if (dados.erro) {
+
+                        document.getElementById('mensagem-produto').textContent =
+                            dados.erro;
+
+                    } else {
+
+                        document.getElementById('mensagem-produto').textContent =
+                            'Produto cadastrado!';
+
+                        document.getElementById('nome-produto').value = '';
+                        document.getElementById('preco-produto').value = '';
+
+                        buscarProdutos();
+                    }
+
+                })
+
+                .catch(erro => {
+
+                    console.error('Erro ao cadastrar produto:', erro);
+
+                    document.getElementById('mensagem-produto').textContent =
+                        'Erro ao conectar com o servidor.';
+
+                });
+
+        });
+
+        let produtos = [];
+
+        function buscarProdutos() {
+
+            fetch('http://localhost:3000/produtos')
+
+                .then(resposta => resposta.json())
+
+                .then(dados => {
+
+                    produtos = dados;
+
+                    renderProdutos();
+
+                })
+
+                .catch(erro => {
+
+                    console.error('Erro ao buscar produtos:', erro);
+
+                });
+
+        }
+
+        function cardProdutos(produto) {
+
+            return `
+                <div class="card-produto" data-nome="${produto.nome}">
+
+                    <h3>${produto.nome}</h3>
+
+                    <p>R$ ${Number(produto.preco).toFixed(2)}</p>
+
+                    <button 
+                        class="btn-excluir" 
+                        data-nome="${produto.nome}">
+                        Excluir
+                    </button>
+
+                </div>
+            `;
+        }
+
+        const container = document.getElementById('tela-produtos');
+
+        container.addEventListener('click', function (evento) {
+
+            const botaoExcluir = evento.target.closest('.btn-excluir');
+
+            if (botaoExcluir) {
+
+                const nome = botaoExcluir.dataset.nome;
+
+                const token = localStorage.getItem('token');
+
+                if (!token) {
+
+                    alert('Faça login para excluir produtos.');
+
+                    return;
+                }
+
+                fetch(
+                    'http://localhost:3000/produtos/' + encodeURIComponent(nome),
+                    {
+                        method: 'DELETE',
+
+                        headers: {
+                            'Authorization': 'Bearer ' + token
+                        }
+                    }
+                )
+
+                    .then(resposta => resposta.json())
+
+                    .then(dados => {
+
+                        if (dados.erro) {
+
+                            alert(dados.erro);
+
+                        } else {
+
+                            buscarProdutos();
+
+                        }
+
+                    })
+
+                    .catch(erro => {
+
+                        console.error('Erro ao excluir produto:', erro);
+
+                    });
+
+                return;
+            }
+
+            const card = evento.target.closest('.card-produto');
+
+            if (!card) {
+                return;
+            }
+
+            document
+                .querySelectorAll('.card-produto')
+                .forEach(c => c.classList.remove('selecionado'));
+
+            card.classList.add('selecionado');
+
+        });
+
+        function renderProdutos() {
+
+            const container = document.getElementById('tela-produtos');
+
+            const cards = produtos.map(cardProdutos).join('');
+
+            container.innerHTML =
+                `<h2>Tela de Produtos</h2>` + cards;
+
+        }
+
+        function adicionarProduto(nome, preco) {
+
+            produtos.push({
+                nome: nome,
+                preco: preco
+            });
+
+            renderProdutos();
+
+        }
+
+        buscarProdutos();
+
+    </script>
+
+</body>
+
+</html>
+
